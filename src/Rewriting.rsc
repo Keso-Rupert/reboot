@@ -23,7 +23,7 @@ void rewrite(loc project) {
   
   for (Tree parseTree <- parseTrees) {
     Tree tree = refactorFieldInjectionToConstructor(parseTree);
-    tree = refactorInjectMocks(tree);
+    tree = refactorInjectMocks(tree, parseTrees);
     
     writeFile(parseTree@\loc, tree);
   }

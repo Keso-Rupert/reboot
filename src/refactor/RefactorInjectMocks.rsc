@@ -4,12 +4,14 @@ import ParseTree;
 import lang::java::\syntax::Java18;
 import String;
 import IO;
+import Prelude;
+import search::Search;
 
-Tree refactorInjectMocks(Tree tree) {
+Tree refactorInjectMocks(Tree tree, list[Tree] parseTrees) {
   tree = rewriteMockitoImports(tree);
   
   tree = rewriteMockAnnotation(tree);
-  tree = rewriteInjectMocksAnnotation(tree);
+  tree = rewriteInjectMocksAnnotation(tree, parseTrees);
   tree = rewriteSpyAnnotation(tree);
   
   return tree;
@@ -74,18 +76,38 @@ Tree rewriteSpyAnnotation(Tree tree) {
     case (FieldDeclaration)`@Spy <UnannType t><VariableDeclaratorId i> = <VariableInitializer varInit>;`
       => (FieldDeclaration)`<UnannType t><VariableDeclaratorId i> = <VariableInitializer vInit>;`
       when VariableInitializer vInit := createVarInitWithSpy(varInit)
- }
+  }
 }
 
-Tree rewriteInjectMocksAnnotation(Tree tree) {
-  VariableInitializer createObjectInitialization(UnannType t) = [VariableInitializer]"new <trim("<t>")>()";
-  
+Tree rewriteInjectMocksAnnotation(Tree tree, list[Tree] parseTrees) { 
   return visit (tree) {
     case (FieldDeclaration)`@InjectMocks <FieldModifier* f> <UnannType t><VariableDeclaratorId i>;`
       => (FieldDeclaration)`<FieldModifier* f> <UnannType t><VariableDeclaratorId i> = <VariableInitializer varInit>;`
-      when VariableInitializer varInit := createObjectInitialization(t)
+      when VariableInitializer varInit := createObjectInitialization(tree, t, parseTrees)
     case (FieldDeclaration)`@InjectMocks <UnannType t><VariableDeclaratorId i>;`
       => (FieldDeclaration)`<UnannType t><VariableDeclaratorId i> = <VariableInitializer varInit>;`
-      when VariableInitializer varInit := createObjectInitialization(t)
+      when VariableInitializer varInit := createObjectInitialization(tree, t, parseTrees)
   }
+}
+
+VariableInitializer createObjectInitialization(Tree tree, UnannType t, list[Tree] parseTrees) {
+  list[UnannType] constructorArgs = findConstructor(parseTrees, t);
+  
+  map[UnannType, VariableDeclaratorId] foundDeps = ();
+  
+  visit (tree) {
+    case (FieldDeclaration)`<FieldModifier* f> <UnannType t><VariableDeclaratorId i> = <VariableInitializer varInit>;` : foundDeps += (t: i);
+    case (FieldDeclaration)`<UnannType t><VariableDeclaratorId i> = <VariableInitializer varInit>;`: foundDeps += (t: i);
+  }
+  
+  list[str] args = [];
+  for (UnannType arg <- constructorArgs) {
+    if (arg in foundDeps) {
+      VariableDeclaratorId varId = foundDeps[arg];
+      args += "<varId>";
+    }
+  }
+    
+  str allArgs = intercalate(", ", args);
+  return [VariableInitializer]"new <trim("<t>")>(<allArgs>)";
 }
