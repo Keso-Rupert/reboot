@@ -5,15 +5,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 
-public class TestWithInjectMocks {
+public class HelloWorldControllerTest {
   @InjectMocks
-  private A a;
+  private HelloWorldController helloWorldController;
   @Mock
-  private B b;
+  private A a;
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-  private C c;
-  @Spy
-  private D d = new D();
+  private B b;
   
   @Test
   public void testSomething() {

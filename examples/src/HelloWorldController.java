@@ -2,11 +2,12 @@ package org.example;
 
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RestController;
 
-@AllArgsConstructor(onConstructor = @__(@Autowired))
-public class Autowired {
+@RestController
+public class HelloWorldController {
   @Autowired
   private A a;
   @Autowired
-  B b;
+  private B b;
 }
